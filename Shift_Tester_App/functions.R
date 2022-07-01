@@ -969,9 +969,7 @@ plot_output_infield = function(infield_plays_in,infield_position_data_in){
   
   
   infield_plays_summary %>% filter(hit_distance>=0) %>% ggplot(aes(x = hit_distance*sin(pull*pi/180),y = hit_distance*cos(pull*pi/180),color = out_prob,size=frac))+
-    geom_point()+
     guides(size = "none")+
-    geom_point(data =  filter(infield_position_data_in,player_position <=6),aes(x = field_x,y=field_y,size=NULL),color="red")+
     scale_color_viridis_c(lim=c(0,1),oob = scales::squish)+
     labs(color = "GroundOut%")+
     theme_minimal()+
@@ -981,12 +979,13 @@ plot_output_infield = function(infield_plays_in,infield_position_data_in){
           axis.ticks = element_blank())+
     xlab("")+
     ylab("")+
+    coord_fixed()+
+    geom_point()+
+    geom_point(data =  filter(infield_position_data_in,player_position <=6),aes(x = field_x,y=field_y,size=NULL),color="red")+
     annotate("segment",x=0,y=0,xend=-200,yend=200,color="black",size=1)+
-    annotate("segment",x=0,y=0,xend=200,yend=200,color="black",size=1)+
     annotate("segment",x=0,y=0,xend=200,yend=200,color="black",size=1)+
     annotate("segment",x=0.5*sqrt(2)*90,y=0.5*sqrt(2)*90,xend=0,yend=sqrt(2)*90,color="black",size=1)+
     annotate("segment",x=-0.5*sqrt(2)*90,y=0.5*sqrt(2)*90,xend=0,yend=sqrt(2)*90,color="black",size=1)+
-    coord_fixed()+
     theme(text = element_text(size = 20),
           axis.text = element_blank())
     
