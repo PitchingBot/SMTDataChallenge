@@ -109,11 +109,11 @@ ui <- fluidPage(
       h2("Flyouts"),
       h4("Catch Probability By Launch Angle and Landing Point"),
       plotOutput("catch_plot",height="600px"),
-      #uiOutput("catch_info"),
+      uiOutput("catch_info"),
       h2("Groundouts"),
       h4("Groundout Probability by Ball Landing Position"),
       plotOutput("infield_plot"),
-      #uiOutput("infield_info",height="600px"),
+      uiOutput("infield_info",height="600px"),
     )
     )
   )
@@ -415,23 +415,23 @@ server <- function(input, output, session) {
                   "<h3>Flyout% = <b>",round(100*results_summary$`FO%`,0),"</b></h3><br><br>",
                   "<h3>Groundout% = <b>",round(100*results_summary$`GO%`,0),"</b></h3><br><br>"))
     })
-    #output$catch_info = renderUI({
-    #  HTML(paste0("<h3>Flyout to 1B = <b>",round(filter(results_summary$catch_summary,player_position==3)$catch*100,0),"%</b></h3>","<br>",
-    #              "<h3>Flyout to 2B = <b>",round(filter(results_summary$catch_summary,player_position==4)$catch*100,0),"%</b></h3>","<br>",
-    #              "<h3>Flyout to 3B = <b>",round(filter(results_summary$catch_summary,player_position==5)$catch*100,0),"%</b></h3>","<br>",
-    #              "<h3>Flyout to SS = <b>",round(filter(results_summary$catch_summary,player_position==6)$catch*100,0),"%</b></h3>","<br>",
-    #              "<h3>Flyout to LF = <b>",round(filter(results_summary$catch_summary,player_position==7)$catch*100,0),"%</b></h3>","<br>",
-    #              "<h3>Flyout to CF = <b>",round(filter(results_summary$catch_summary,player_position==8)$catch*100,0),"%</b></h3>","<br>",
-    #              "<h3>Flyout to RF = <b>",round(filter(results_summary$catch_summary,player_position==9)$catch*100,0),"%</b></h3>","<br>"))
-    #})
+    output$catch_info = renderUI({
+      HTML(paste0("<h3>Flyout to 1B = <b>",round(filter(results_summary$catch_summary,player_position==3)$catch*100,0),"%</b></h3>","<br>",
+                  "<h3>Flyout to 2B = <b>",round(filter(results_summary$catch_summary,player_position==4)$catch*100,0),"%</b></h3>","<br>",
+                  "<h3>Flyout to 3B = <b>",round(filter(results_summary$catch_summary,player_position==5)$catch*100,0),"%</b></h3>","<br>",
+                  "<h3>Flyout to SS = <b>",round(filter(results_summary$catch_summary,player_position==6)$catch*100,0),"%</b></h3>","<br>",
+                  "<h3>Flyout to LF = <b>",round(filter(results_summary$catch_summary,player_position==7)$catch*100,0),"%</b></h3>","<br>",
+                  "<h3>Flyout to CF = <b>",round(filter(results_summary$catch_summary,player_position==8)$catch*100,0),"%</b></h3>","<br>",
+                  "<h3>Flyout to RF = <b>",round(filter(results_summary$catch_summary,player_position==9)$catch*100,0),"%</b></h3>","<br>"))
+    })
     shinybusy::remove_modal_spinner()
-    #output$infield_info = renderUI({
-    #  HTML(paste0("<h3>Groundout to 1B = <b>",round(filter(results_summary$infield_summary,player_position==3)$out_made*100,0),"%</b></h3>","<br>",
-    #              "<h3>Groundout to 2B = <b>",round(filter(results_summary$infield_summary,player_position==4)$out_made*100,0),"%</b></h3>","<br>",
-    #              "<h3>Groundout to 3B = <b>",round(filter(results_summary$infield_summary,player_position==5)$out_made*100,0),"%</b></h3>","<br>",
-    #              "<h3>Groundout to SS = <b>",round(filter(results_summary$infield_summary,player_position==6)$out_made*100,0),"%</b></h3>","<br>",
-    #              "<h3>Infield Hit = <b>",round(sum(results_summary$infield_summary$infield_hit)*100,0),"%</b></h3>","<br>"))
-    #})
+    output$infield_info = renderUI({
+      HTML(paste0("<h3>Groundout to 1B = <b>",round(filter(results_summary$infield_summary,player_position==3)$out_made*100,0),"%</b></h3>","<br>",
+                  "<h3>Groundout to 2B = <b>",round(filter(results_summary$infield_summary,player_position==4)$out_made*100,0),"%</b></h3>","<br>",
+                  "<h3>Groundout to 3B = <b>",round(filter(results_summary$infield_summary,player_position==5)$out_made*100,0),"%</b></h3>","<br>",
+                  "<h3>Groundout to SS = <b>",round(filter(results_summary$infield_summary,player_position==6)$out_made*100,0),"%</b></h3>","<br>",
+                  "<h3>Infield Hit = <b>",round(sum(results_summary$infield_summary$infield_hit)*100,0),"%</b></h3>","<br>"))
+    })
     
   })
   
@@ -579,23 +579,23 @@ server <- function(input, output, session) {
                   "<h3>Flyout% = <b>",round(100*results_summary$`FO%`,0),"</b></h3><br><br>",
                   "<h3>Groundout% = <b>",round(100*results_summary$`GO%`,0),"</b></h3><br><br>"))
     })
-    #output$catch_info = renderUI({
-    #  HTML(paste0("<h3>Flyout to 1B = <b>",round(filter(results_summary$catch_summary,player_position==3)$catch*100,0),"%</b></h3>","<br>",
-    #              "<h3>Flyout to 2B = <b>",round(filter(results_summary$catch_summary,player_position==4)$catch*100,0),"%</b></h3>","<br>",
-    #              "<h3>Flyout to 3B = <b>",round(filter(results_summary$catch_summary,player_position==5)$catch*100,0),"%</b></h3>","<br>",
-    #              "<h3>Flyout to SS = <b>",round(filter(results_summary$catch_summary,player_position==6)$catch*100,0),"%</b></h3>","<br>",
-    #              "<h3>Flyout to LF = <b>",round(filter(results_summary$catch_summary,player_position==7)$catch*100,0),"%</b></h3>","<br>",
-    #              "<h3>Flyout to CF = <b>",round(filter(results_summary$catch_summary,player_position==8)$catch*100,0),"%</b></h3>","<br>",
-    #              "<h3>Flyout to RF = <b>",round(filter(results_summary$catch_summary,player_position==9)$catch*100,0),"%</b></h3>","<br>"))
-    #})
+    output$catch_info = renderUI({
+      HTML(paste0("<h3>Flyout to 1B = <b>",round(filter(results_summary$catch_summary,player_position==3)$catch*100,0),"%</b></h3>","<br>",
+                  "<h3>Flyout to 2B = <b>",round(filter(results_summary$catch_summary,player_position==4)$catch*100,0),"%</b></h3>","<br>",
+                  "<h3>Flyout to 3B = <b>",round(filter(results_summary$catch_summary,player_position==5)$catch*100,0),"%</b></h3>","<br>",
+                  "<h3>Flyout to SS = <b>",round(filter(results_summary$catch_summary,player_position==6)$catch*100,0),"%</b></h3>","<br>",
+                  "<h3>Flyout to LF = <b>",round(filter(results_summary$catch_summary,player_position==7)$catch*100,0),"%</b></h3>","<br>",
+                  "<h3>Flyout to CF = <b>",round(filter(results_summary$catch_summary,player_position==8)$catch*100,0),"%</b></h3>","<br>",
+                  "<h3>Flyout to RF = <b>",round(filter(results_summary$catch_summary,player_position==9)$catch*100,0),"%</b></h3>","<br>"))
+    })
     shinybusy::remove_modal_spinner()
-    #output$infield_info = renderUI({
-    #  HTML(paste0("<h3>Groundout to 1B = <b>",round(filter(results_summary$infield_summary,player_position==3)$out_made*100,0),"%</b></h3>","<br>",
-    #              "<h3>Groundout to 2B = <b>",round(filter(results_summary$infield_summary,player_position==4)$out_made*100,0),"%</b></h3>","<br>",
-    #              "<h3>Groundout to 3B = <b>",round(filter(results_summary$infield_summary,player_position==5)$out_made*100,0),"%</b></h3>","<br>",
-    #              "<h3>Groundout to SS = <b>",round(filter(results_summary$infield_summary,player_position==6)$out_made*100,0),"%</b></h3>","<br>",
-    #              "<h3>Infield Hit = <b>",round(sum(results_summary$infield_summary$infield_hit)*100,0),"%</b></h3>","<br>"))
-    #})
+    output$infield_info = renderUI({
+      HTML(paste0("<h3>Groundout to 1B = <b>",round(filter(results_summary$infield_summary,player_position==3)$out_made*100,0),"%</b></h3>","<br>",
+                  "<h3>Groundout to 2B = <b>",round(filter(results_summary$infield_summary,player_position==4)$out_made*100,0),"%</b></h3>","<br>",
+                  "<h3>Groundout to 3B = <b>",round(filter(results_summary$infield_summary,player_position==5)$out_made*100,0),"%</b></h3>","<br>",
+                  "<h3>Groundout to SS = <b>",round(filter(results_summary$infield_summary,player_position==6)$out_made*100,0),"%</b></h3>","<br>",
+                  "<h3>Infield Hit = <b>",round(sum(results_summary$infield_summary$infield_hit)*100,0),"%</b></h3>","<br>"))
+    })
     
     
     

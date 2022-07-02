@@ -427,7 +427,7 @@ fielding_model_function_variable = function(hitter_spray,batter_time_in,player_p
   
   total_babip = 1 - (infield_plays_summary %>% ungroup() %>% summarise(out_prob = weighted.mean(out_prob,frac)) * infield_frac) - 
     ((binned_results_dframe_joined_summary %>% ungroup() %>% summarise(catch_prob = weighted.mean(catch_prob,frac))) * outfield_frac)
-  print((infield_plays_summary %>% ungroup() %>% summarise(inield_prob = weighted.mean(infield_prob,frac)))* infield_frac)
+  # print((infield_plays_summary %>% ungroup() %>% summarise(infield_prob = weighted.mean(infield_prob,frac)))* infield_frac)
   
   time6 = timeDate::timeDate()
   
@@ -809,6 +809,38 @@ fielding_model_all_info_function = function(hitter_spray,batter_time_in,player_p
   }
   
   
+
+  if(!max_prob){
+    infield_plays_summary_no_group = infield_plays %>% group_by(pull,launch_angle,launch_speed,frac,hit_distance,pos_x,pos_y) %>% mutate(
+      out_prob_sum = sum(success_field,na.rm=TRUE),
+      out_prob = 1- Reduce("*",fail_field),
+      fielded_sum = sum(fielded,na.rm=TRUE),
+      fielded_agg = 1 - Reduce("*",1-fielded),
+      #out_prob = max(success_field,na.rm=TRUE),
+      infield_prob = 1 - Reduce("*",fail_reach_ball),
+      .groups="drop"
+    ) %>% ungroup() %>% 
+      mutate(out_prob = if_else(out_prob>=1,1,out_prob))%>% 
+      mutate(
+        fraction_player = success_field * out_prob / out_prob_sum,
+        fraction_player_field = fielded * fielded_agg / fielded_sum
+      )
+  }
+  
+  if(!max_prob){
+    binned_results_dframe_joined_summary_no_group = binned_results_dframe_joined %>% group_by(pull,launch_angle,launch_speed,frac,hit_distance,pos_x,pos_y) %>% 
+      mutate(no_catch_prob = 1 - catch_prob) %>% 
+     mutate(
+        catch_prob_sum = sum(catch_prob,na.rm=TRUE),
+        catch_prob_total = 1 - Reduce("*",no_catch_prob),
+        #catch_prob = max(catch_prob,na.rm=TRUE),
+        .groups="drop"
+      ) %>% ungroup() %>% 
+      mutate(fraction_player = catch_prob * catch_prob_total / catch_prob_sum)
+  }
+  
+  
+  
   infield_out_frac = (infield_plays_summary %>% ungroup() %>% summarise(out_prob = weighted.mean(out_prob,frac)))* infield_frac
   catch_out_frac = binned_results_dframe_joined_summary %>% ungroup() %>% summarise(catch_prob = weighted.mean(catch_prob,frac))* outfield_frac
   
@@ -821,15 +853,18 @@ fielding_model_all_info_function = function(hitter_spray,batter_time_in,player_p
   
   # functions to get positional summary
   
-  infield_summary = infield_plays %>% group_by(player_position) %>% summarise(fielded = sum(fielded*frac),
-                                                                              out_made = sum(success_field*frac),
-                                                                              infield_hit = sum(fielded*(1-out_if_field)*frac))
+  print(total_frac)
   
-  catch_summary = binned_results_dframe_joined %>% group_by(player_position) %>% summarise(catch = sum(catch_prob*frac))
+  infield_summary = (infield_plays_summary_no_group %>% group_by(player_position) %>% summarise(out_made = sum(fraction_player*frac,na.rm=TRUE)/total_frac,
+                                                                                                infield_hit = sum((fraction_player_field - fraction_player)*frac,na.rm=TRUE)/total_frac))
   
-  print((infield_plays_summary %>% ungroup() %>% summarise(inield_prob = weighted.mean(infield_prob,frac)))* infield_frac)
+  # catch_summary = binned_results_dframe_joined %>% group_by(player_position) %>% summarise(catch = sum(catch_prob*frac))
   
-  # rejig infield and catch summaries slightly, as they 
+  catch_summary = (binned_results_dframe_joined_summary_no_group %>% group_by(player_position) %>% summarise(catch = sum(fraction_player*frac,na.rm=TRUE)/total_frac))
+  
+
+  #print(head(infield_plays))
+  #print(colnames(infield_plays))
   
   return(list("BABIP" = total_babip,
               "GO%" = infield_out_frac,
