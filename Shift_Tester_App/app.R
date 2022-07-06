@@ -26,7 +26,7 @@ library(purrr)
 
 init_value = 0
 source("functions.R")
-
+batter_name_data = readRDS("batter_spray_mlb.rds")
 
 
 ui <- fluidPage(
@@ -50,8 +50,9 @@ ui <- fluidPage(
       sliderInput("batter_gb","Average Batter Groundball Pull%", min = 0.4,max = 0.85,value = 0.7),
       sliderInput("batter_fb","Average Batter Flyball Pull%", min = 0.25,max = 0.8,value = 0.45),
       sliderInput("batter_speed","Batter Home-to-First Time (ms)",min = 3900,max = 5000,value = 4500),
-      
-      actionButton("go_batter","Create Spray Distribution"),
+      selectInput("batter_names","Alternatively, update the sliders above with an existing MLB hitter",choices = unique(batter_name_data$name)),
+      actionButton("update_hitter","Update using MLB hitter values"),
+      actionButton("go_batter","Create Spray Distribution Graphs"),
       h2("Exit Velocity"),
       plotOutput("EV"),
       h2("Launch Angle"),
@@ -104,11 +105,11 @@ ui <- fluidPage(
                       )),
       h2("Drag Points to Change Fielder Positions"),
       plotlyOutput("Draggable_Graph",width="500px",height="500px"),
-      fluidRow(column(width=6,actionButton("go","Try This Shift!")),column(width=6,actionButton("go_algo","Produce Suggested Shift (Takes a few minutes)"))),
+      fluidRow(column(width=6,actionButton("go","Try This Shift!")),column(width=6,actionButton("go_algo","Produce Suggested Shift (Warning: Takes a few minutes!)"))),
       uiOutput("babip"),
       h2("Flyouts"),
       h4("Catch Probability By Launch Angle and Landing Point"),
-      plotOutput("catch_plot",height="600px"),
+      plotOutput("catch_plot",height="1200px"),
       uiOutput("catch_info"),
       h2("Groundouts"),
       h4("Groundout Probability by Ball Landing Position"),
@@ -125,6 +126,21 @@ ui <- fluidPage(
 
 
 server <- function(input, output, session) {
+  
+  observeEvent(input$update_hitter,{
+    hitter_spec = batter_name_data %>% filter(name==input$batter_names)
+    
+    updateSliderInput(session,"batter_ev","Average Batter Exit Velocity (mph)", min = 75,max = 95,value = hitter_spec$launch_speed_av)
+    updateSliderInput(session,"batter_la","Average Batter Launch Angle", min = -5,max = 35,value =  hitter_spec$launch_angle_av)
+    updateSliderInput(session,"batter_gb","Average Batter Groundball Pull%", min = 0.4,max = 0.85,value =  hitter_spec$gb_pull)
+    updateSliderInput(session,"batter_fb","Average Batter Flyball Pull%", min = 0.25,max = 0.8,value =  hitter_spec$fb_pull)
+    updateSliderInput(session,"batter_speed","Batter Home-to-First Time (ms)",min = 3900,max = 5000,value =  hitter_spec$home_first*1000)
+    updateSelectInput(session,"batter_hand",
+                label ="Batter Handedness",
+                choices = c("R","L"),
+                selected = hitter_spec$handedness)
+  })
+  
   batter_spray_ev <- eventReactive(input$go_batter,{
     input$batter_ev
   },ignoreNULL = FALSE)
@@ -163,13 +179,13 @@ server <- function(input, output, session) {
   
   
   
-  circle3 <- reactiveValues(x = -60, y = 105)
-  circle4 <- reactiveValues(x = -30, y = 140)
-  circle2 <- reactiveValues(x = 25, y = 145)
-  circle1 <- reactiveValues(x = 60, y = 100)
-  circle5 <- reactiveValues(x = -135, y = 265)
-  circle6 <- reactiveValues(x = 0, y = 320)
-  circle7 <- reactiveValues(x = 135, y = 265)
+  circle3 <- reactiveValues(x = -70, y = 125)
+  circle4 <- reactiveValues(x = -40, y = 150)
+  circle2 <- reactiveValues(x = 5, y = 155)
+  circle1 <- reactiveValues(x = 50, y = 100)
+  circle5 <- reactiveValues(x = -125, y = 305)
+  circle6 <- reactiveValues(x = 0, y = 340)
+  circle7 <- reactiveValues(x = 95, y = 265)
   
   #All the points in between
   observe(
@@ -238,7 +254,7 @@ server <- function(input, output, session) {
       player_position_data = data.frame(
         match = c(1,1,1,1,1,1,1),
         player_position = c(3,4,5,6,7,8,9),
-        depth = c(110,151,118,145,298,322,294),
+        depth = c(112,155,143,155,330,340,282),
         angle = c(30,-1,-34,-15,-23,4,31),
         field_x = c(field_x_1b,field_x_2b,field_x_3b,field_x_ss,field_x_lf,field_x_cf,field_x_rf),
         field_y = c(field_y_1b,field_y_2b,field_y_3b,field_y_ss,field_y_lf,field_y_cf,field_y_rf),
@@ -295,6 +311,7 @@ server <- function(input, output, session) {
       plot_ly() %>%
         add_paths(x = c(-200,0,200), y = c(200,0,200), opacity = 1,showlegend = F) %>%
         add_paths(x = c(0,90/sqrt(2),0,-90/sqrt(2),0), y = c(0,90/sqrt(2),90*sqrt(2),90/sqrt(2),0), opacity = 1,showlegend = F) %>%
+        add_paths(x = arc_data$x,y = arc_data$y,opacity=1,showlegend=F) %>% 
         add_markers(x = c(0,90/sqrt(2),0,-90/sqrt(2)), y = c(0,90/sqrt(2),90*sqrt(2),90/sqrt(2)), opacity = 1,showlegend = F,size=5) %>%
         layout(shapes = circles, xaxis = list(range = c(-200, 200)), yaxis = list(range = c(0, 400))) %>%
         config(edits = list(shapePosition = TRUE))
@@ -358,7 +375,7 @@ server <- function(input, output, session) {
     player_position_data = data.frame(
       match = c(1,1,1,1,1,1,1),
       player_position = c(3,4,5,6,7,8,9),
-      depth = c(110,151,118,145,298,322,294),
+      depth = c(112,155,143,155,330,340,282),
       angle = c(30,-1,-34,-15,-23,4,31),
       field_x = c(field_x_1b,field_x_2b,field_x_3b,field_x_ss,field_x_lf,field_x_cf,field_x_rf),
       field_y = c(field_y_1b,field_y_2b,field_y_3b,field_y_ss,field_y_lf,field_y_cf,field_y_rf),
@@ -441,13 +458,13 @@ server <- function(input, output, session) {
   observeEvent(input$go_algo,{
     shinybusy::show_modal_spinner(spin = "orbit",text = "Fitting Iteration 1 (Max. 15)")
     
-    circle3 <- reactiveValues(x = -60, y = 105)
-    circle4 <- reactiveValues(x = -30, y = 140)
-    circle2 <- reactiveValues(x = 25, y = 145)
-    circle1 <- reactiveValues(x = 60, y = 80)
-    circle5 <- reactiveValues(x = -135, y = 265)
-    circle6 <- reactiveValues(x = 0, y = 320)
-    circle7 <- reactiveValues(x = 135, y = 265)
+    circle3 <- reactiveValues(x = -70, y = 125)
+    circle4 <- reactiveValues(x = -40, y = 150)
+    circle2 <- reactiveValues(x = 5, y = 155)
+    circle1 <- reactiveValues(x = 50, y = 100)
+    circle5 <- reactiveValues(x = -125, y = 305)
+    circle6 <- reactiveValues(x = 0, y = 340)
+    circle7 <- reactiveValues(x = 95, y = 265)
     
     
     field_x_1b = circle1$x
@@ -469,7 +486,7 @@ server <- function(input, output, session) {
     player_position_data = data.frame(
       match = c(1,1,1,1,1,1,1),
       player_position = c(3,4,5,6,7,8,9),
-      depth = c(110,151,118,145,298,322,294),
+      depth = c(112,155,143,155,330,340,282),
       angle = c(30,-1,-34,-15,-23,4,31),
       field_x = c(field_x_1b,field_x_2b,field_x_3b,field_x_ss,field_x_lf,field_x_cf,field_x_rf),
       field_y = c(field_y_1b,field_y_2b,field_y_3b,field_y_ss,field_y_lf,field_y_cf,field_y_rf),
@@ -478,7 +495,7 @@ server <- function(input, output, session) {
     
     player_position_data = player_position_data %>% mutate(depth = sqrt((field_x)**2 + (field_y)**2))
     
-    
+
     
     
     batter_speed = input$batter_speed
@@ -495,12 +512,12 @@ server <- function(input, output, session) {
     #batter_spray_new %>% group_by(gb = as.numeric(launch_angle<=10)) %>% summarise(pull = sum(frac[pull<=0])) %>% mutate(new_frac = pull / sum(pull)) %>% print()
     test_outputs = multiple_iterations_fast(player_position_data,batter_spray_new,input$batter_speed,infield_ability,15)
     
-    
+    #print(test_outputs)
     
     player_position_data <- test_outputs %>% group_by(player_position) %>% filter(iter_counter == max(iter_counter)) %>% ungroup() %>% select(-iter_counter)
     player_position_data <<- test_outputs %>% group_by(player_position) %>% filter(iter_counter == max(iter_counter)) %>% ungroup() %>% select(-iter_counter)
     
-    # print(player_position_data)
+    print(player_position_data)
     
     circle3 <- reactiveValues(x = filter(player_position_data,player_position==5)$field_x, y = filter(player_position_data,player_position==5)$field_y)
     circle4 <- reactiveValues(x = filter(player_position_data,player_position==6)$field_x, y = filter(player_position_data,player_position==6)$field_y)
@@ -554,6 +571,7 @@ server <- function(input, output, session) {
         plot_ly() %>%
           add_paths(x = c(-200,0,200), y = c(200,0,200), opacity = 1,showlegend = F) %>%
           add_paths(x = c(0,90/sqrt(2),0,-90/sqrt(2),0), y = c(0,90/sqrt(2),90*sqrt(2),90/sqrt(2),0), opacity = 1,showlegend = F) %>%
+          add_paths(x = arc_data$x,y = arc_data$y,opacity=1,showlegend=F) %>% 
           add_markers(x = c(0,90/sqrt(2),0,-90/sqrt(2)), y = c(0,90/sqrt(2),90*sqrt(2),90/sqrt(2)), opacity = 1,showlegend = F,size=5) %>%
           layout(shapes = circles, xaxis = list(range = c(-200, 200)), yaxis = list(range = c(0, 400))) %>%
           config(edits = list(shapePosition = TRUE))
@@ -563,16 +581,6 @@ server <- function(input, output, session) {
     
     results_summary = fielding_model_all_info_function(batter_spray_new,batter_speed,player_position_data,infield_ability)
     # print(results_summary)
-    
-    output$catch_plot = renderPlot({
-      fig = plot_output_catch(results_summary$catch_data,player_position_data)
-      fig
-    })
-    
-    output$infield_plot = renderPlot({
-      fig = plot_output_infield(results_summary$infield_data,player_position_data)
-      fig
-    })
     
     output$babip = renderUI({
       HTML(paste0("<h3>BABIP = <b>",round(results_summary$BABIP,3),"</b></h3><br><br>",
@@ -588,7 +596,7 @@ server <- function(input, output, session) {
                   "<h3>Flyout to CF = <b>",round(filter(results_summary$catch_summary,player_position==8)$catch*100,0),"%</b></h3>","<br>",
                   "<h3>Flyout to RF = <b>",round(filter(results_summary$catch_summary,player_position==9)$catch*100,0),"%</b></h3>","<br>"))
     })
-    shinybusy::remove_modal_spinner()
+    
     output$infield_info = renderUI({
       HTML(paste0("<h3>Groundout to 1B = <b>",round(filter(results_summary$infield_summary,player_position==3)$out_made*100,0),"%</b></h3>","<br>",
                   "<h3>Groundout to 2B = <b>",round(filter(results_summary$infield_summary,player_position==4)$out_made*100,0),"%</b></h3>","<br>",
@@ -596,6 +604,20 @@ server <- function(input, output, session) {
                   "<h3>Groundout to SS = <b>",round(filter(results_summary$infield_summary,player_position==6)$out_made*100,0),"%</b></h3>","<br>",
                   "<h3>Infield Hit = <b>",round(sum(results_summary$infield_summary$infield_hit)*100,0),"%</b></h3>","<br>"))
     })
+    
+    Sys.sleep(0.05)
+    output$catch_plot = renderPlot({
+      fig = plot_output_catch(results_summary$catch_data,player_position_data)
+      fig
+    })
+    
+    output$infield_plot = renderPlot({
+      fig = plot_output_infield(results_summary$infield_data,player_position_data)
+      fig
+    })
+    
+    shinybusy::remove_modal_spinner()
+    
     
     
     

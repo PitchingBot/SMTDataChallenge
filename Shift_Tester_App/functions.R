@@ -21,12 +21,13 @@ infield_depth_model = readRDS("depth_model_LM.rds")
 spray_chart_tabulate = readRDS("tabulated_spray_chart.rds")
 
 
+max_prob_fitting = FALSE
 
-binned_results_dframe_filtered = binned_results_dframe %>% filter(frac>0)
+binned_results_dframe_filtered = binned_results_dframe# %>% filter(frac>0)
 
 batter_spray = binned_results_dframe_filtered
 
-
+arc_data = data.frame(x = 95*sin(seq(-pi/2.5,pi/2.5,0.001)), y=60.5+95*cos(seq(-pi/2.5,pi/2.5,0.001)))
 
 # player_position_data = data.frame(
 #   match = c(1,1,1,1,1,1,1),
@@ -117,6 +118,8 @@ find_batter_spray = function(batter_spray,avg_speed,average_launch,gb_pull,fb_pu
       mutate(pos_x = hit_distance * sin(pull * pi / 180),
              pos_y = hit_distance*cos(pull * pi / 180))
   }
+  
+  batter_spray_speed = batter_spray_speed %>% filter(frac>=0)
   
   return(batter_spray_speed)
   
@@ -445,7 +448,7 @@ iterate_step = function(player_position,batter_spray,batter_speed){
   temp_results = bind_rows(temp_results,data.frame(
     player_position = c(3,4,5,6,7,8,9),
     movement_dir = "n",
-    babip = fielding_model_function_variable(batter_spray,batter_speed,player_position,infield_ability,max_prob = TRUE)[3]
+    babip = fielding_model_function_variable(batter_spray,batter_speed,player_position,infield_ability,max_prob = max_prob_fitting)[3]
   ))
   
   for(p in c(3,4,5,6,7,8,9)){ # Don't move 1B for now, realistic limit on how far they can move given they need to be near the bag
@@ -459,7 +462,7 @@ iterate_step = function(player_position,batter_spray,batter_speed){
       ) %>% 
         mutate(depth = sqrt((field_x)**2 + (field_y)**2))
       
-      babip_in = fielding_model_function_variable(batter_spray,batter_speed,player_position_data_temp,infield_ability,max_prob = TRUE)[3]
+      babip_in = fielding_model_function_variable(batter_spray,batter_speed,player_position_data_temp,infield_ability,max_prob = max_prob_fitting)[3]
       
       
       dist_1b_bag = player_position_data_temp %>% filter(player_position==3) %>% 
@@ -538,6 +541,7 @@ multiple_iterations = function(player_position,batter_spray,batter_speed,max_ite
 
 iterate_step_fast = function(player_position,batter_spray,batter_speed,infield_ability,positions_stable){
   
+  # print(player_position)
   movements = c("u","l","r","d") #u,l,d,r directions, n = unchanged
   
   temp_results = data.frame()
@@ -549,7 +553,7 @@ iterate_step_fast = function(player_position,batter_spray,batter_speed,infield_a
   temp_results = bind_rows(temp_results,data.frame(
     player_position = c(3,4,5,6,7,8,9),
     movement_dir = "n",
-    babip = fielding_model_function_variable(batter_spray,batter_speed,player_position,infield_ability,max_prob = TRUE)[3]
+    babip = fielding_model_function_variable(batter_spray,batter_speed,player_position,infield_ability,max_prob = max_prob_fitting)[3]
   ))
   
   for(p in move_positions){ # Don't move 1B for now, realistic limit on how far they can move given they need to be near the bag
@@ -563,7 +567,7 @@ iterate_step_fast = function(player_position,batter_spray,batter_speed,infield_a
       ) %>% 
         mutate(depth = sqrt((field_x)**2 + (field_y)**2))
       
-      babip_in = fielding_model_function_variable(batter_spray,batter_speed,player_position_data_temp,infield_ability,max_prob = TRUE)[3]
+      babip_in = fielding_model_function_variable(batter_spray,batter_speed,player_position_data_temp,infield_ability,max_prob = max_prob_fitting)[3]
       
       
       dist_1b_bag = player_position_data_temp %>% filter(player_position==3) %>% 
@@ -591,7 +595,7 @@ iterate_step_fast = function(player_position,batter_spray,batter_speed,infield_a
   
   
   
-  
+  #print(player_position)
   
   
   new_player_position = player_position %>% left_join(movement_direction) %>% mutate(
@@ -621,10 +625,11 @@ multiple_iterations_fast = function(player_position,batter_spray,batter_speed,in
   player_position_counter = data.frame()
   player_position_new = player_position
   while(iter_counter < max_iter){
-    print(iter_counter)
+    #print(iter_counter)
     player_position_new_temp = iterate_step_fast(player_position_new,batter_spray,batter_speed,infield_ability,positions_stable)
     if(all((arrange(player_position_new,player_position)$field_x==arrange(player_position_new_temp,player_position)$field_x)&
            (arrange(player_position_new,player_position)$field_y==arrange(player_position_new_temp,player_position)$field_y))){
+      player_position_counter = bind_rows(player_position_counter,mutate(player_position_new_temp,iter_counter = iter_counter))
       return(player_position_counter)
     }
     else{
@@ -862,7 +867,7 @@ fielding_model_all_info_function = function(hitter_spray,batter_time_in,player_p
   
   catch_summary = (binned_results_dframe_joined_summary_no_group %>% group_by(player_position) %>% summarise(catch = sum(fraction_player*frac,na.rm=TRUE)/total_frac))
   
-
+  
   #print(head(infield_plays))
   #print(colnames(infield_plays))
   
@@ -948,6 +953,7 @@ plot_positions = function(player_position_data_in){
     theme(text = element_text(size = 20),
           axis.text.x = element_blank())+
     geom_label(aes(label = player_position),nudge_x = 10,nudge_y = 10)+
+    geom_line(data = arc_data,aes(x=x,y=y),color="black",size=1)+
     xlab("")+
     ylab("")
   
@@ -971,7 +977,6 @@ plot_output_catch = function(binned_results_dframe_joined,player_position_data){
   
   fig = binned_results_dframe_joined_summary %>% filter(hit_distance!=0,launch_angle>=0,launch_angle <=74) %>% ggplot(aes(x = pos_x,y = pos_y,color = catch_prob))+
     geom_point()+
-    geom_point(data =  player_position_data,aes(x = field_x,y=field_y),color="red")+
     scale_color_viridis_c(lim=c(0,1),oob = scales::squish,labels = scales::percent_format())+
     labs(color = "Catch%")+
     theme_minimal()+
@@ -981,13 +986,15 @@ plot_output_catch = function(binned_results_dframe_joined,player_position_data){
           axis.ticks = element_blank())+
     xlab("")+
     ylab("")+
-    facet_wrap(~(round(launch_angle*0.1,0)*10))+
+    facet_wrap(~(round(launch_angle*0.1,0)*10),ncol = 2)+
     annotate("segment",x=0,y=0,xend=-200,yend=200,color="black",size=1)+
     annotate("segment",x=0,y=0,xend=200,yend=200,color="black",size=1)+
     annotate("segment",x=0,y=0,xend=200,yend=200,color="black",size=1)+
     annotate("segment",x=0.5*sqrt(2)*90,y=0.5*sqrt(2)*90,xend=0,yend=sqrt(2)*90,color="black",size=1)+
     annotate("segment",x=-0.5*sqrt(2)*90,y=0.5*sqrt(2)*90,xend=0,yend=sqrt(2)*90,color="black",size=1)+
     coord_fixed()+
+    geom_line(data = arc_data,aes(x=x,y=y),color="black",size=1)+
+    geom_point(data =  player_position_data,aes(x = field_x,y=field_y),color="red",size=4)+
     theme(text = element_text(size = 20),
           axis.text = element_blank())
   return(fig)
@@ -1016,11 +1023,12 @@ plot_output_infield = function(infield_plays_in,infield_position_data_in){
     ylab("")+
     coord_fixed()+
     geom_point()+
-    geom_point(data =  filter(infield_position_data_in,player_position <=6),aes(x = field_x,y=field_y,size=NULL),color="red")+
     annotate("segment",x=0,y=0,xend=-200,yend=200,color="black",size=1)+
     annotate("segment",x=0,y=0,xend=200,yend=200,color="black",size=1)+
     annotate("segment",x=0.5*sqrt(2)*90,y=0.5*sqrt(2)*90,xend=0,yend=sqrt(2)*90,color="black",size=1)+
     annotate("segment",x=-0.5*sqrt(2)*90,y=0.5*sqrt(2)*90,xend=0,yend=sqrt(2)*90,color="black",size=1)+
+    geom_line(data = arc_data,aes(x=x,y=y),color="black",size=1)+
+    geom_point(data =  filter(infield_position_data_in,player_position <=6),aes(x = field_x,y=field_y,size=NULL),color="red",size=4)+
     theme(text = element_text(size = 20),
           axis.text = element_blank())
     
@@ -1028,4 +1036,6 @@ plot_output_infield = function(infield_plays_in,infield_position_data_in){
 }
 
 output_stats = function(){}
+
+
 
