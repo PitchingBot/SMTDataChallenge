@@ -493,7 +493,7 @@ iterate_step = function(player_position,batter_spray,batter_speed){
   
   
   
-  new_player_position = player_position %>% left_join(movement_direction) %>% mutate(
+  new_player_position = player_position %>% left_join(movement_direction,by = "player_position") %>% mutate(
     field_x = if_else((movement_dir == "l"), field_x - 10, field_x),
     field_x = if_else((movement_dir == "r"), field_x + 10, field_x),
     field_y = if_else((movement_dir == "d"), field_y - 10, field_y),
@@ -858,7 +858,7 @@ fielding_model_all_info_function = function(hitter_spray,batter_time_in,player_p
   
   # functions to get positional summary
   
-  print(total_frac)
+  # print(total_frac)
   
   infield_summary = (infield_plays_summary_no_group %>% group_by(player_position) %>% summarise(out_made = sum(fraction_player*frac,na.rm=TRUE)/total_frac,
                                                                                                 infield_hit = sum((fraction_player_field - fraction_player)*frac,na.rm=TRUE)/total_frac))
@@ -887,6 +887,7 @@ fielding_model_all_info_function = function(hitter_spray,batter_time_in,player_p
 
 
 EV_hist = function(batter_spray_in){
+  print("Make Spray Graphs")
   fig = batter_spray_in %>% group_by(launch_speed) %>% summarise(frac = sum(frac)) %>% ggplot(aes(x = launch_speed,y=frac))+
     geom_point(size=4)+
     geom_line(size=2)+
@@ -919,7 +920,7 @@ Pull_hist  = function(batter_spray_in){
   #   facet_wrap(~paste("LA:",(round(launch_angle*0.1,0)*10),sep=" "))+
   #   theme(text = element_text(size = 20))
   
-  fig = batter_spray_in %>% group_by(pull,launch_angle = round(launch_angle*0.1,0)*10) %>% summarise(frac = sum(frac)) %>% filter(launch_angle <=75) %>%  ggplot(aes(x = pull,y=frac))+
+  fig = batter_spray_in %>% group_by(pull,launch_angle = round(launch_angle*0.1,0)*10) %>% summarise(frac = sum(frac),.groups="drop") %>% filter(launch_angle <=75) %>%  ggplot(aes(x = pull,y=frac))+
     geom_point(size=4)+
     geom_line(size=2)+
     theme_minimal()+
@@ -963,11 +964,12 @@ plot_positions = function(player_position_data_in){
 
 plot_output_catch = function(binned_results_dframe_joined,player_position_data){
   
-  binned_results_dframe_joined_summary = binned_results_dframe_joined %>% group_by(pull,launch_angle,launch_speed,frac,hit_distance,pos_x,pos_y) %>% 
+  binned_results_dframe_joined_summary = binned_results_dframe_joined %>% filter(hit_distance!=0,launch_angle>15,launch_angle <55,frac>0) %>% group_by(pull,launch_angle,launch_speed,frac,hit_distance,pos_x,pos_y) %>% 
     mutate(no_catch_prob = 1 - catch_prob) %>% 
     summarise(
       catch_prob_sum = sum(catch_prob,na.rm=TRUE),
       catch_prob = 1 - Reduce("*",no_catch_prob),
+      .groups = "drop"
     ) %>% 
     mutate(catch_prob = if_else(catch_prob>=1,1,catch_prob))
   
@@ -975,7 +977,7 @@ plot_output_catch = function(binned_results_dframe_joined,player_position_data){
   binned_results_dframe_joined_summary %>% ungroup() %>% summarise(catch_prob = weighted.mean(catch_prob,frac))
   
   
-  fig = binned_results_dframe_joined_summary %>% filter(hit_distance!=0,launch_angle>=0,launch_angle <=74) %>% ggplot(aes(x = pos_x,y = pos_y,color = catch_prob))+
+  fig = binned_results_dframe_joined_summary %>% ggplot(aes(x = pos_x,y = pos_y,color = catch_prob))+
     geom_point()+
     scale_color_viridis_c(lim=c(0,1),oob = scales::squish,labels = scales::percent_format())+
     labs(color = "Catch%")+
@@ -986,7 +988,7 @@ plot_output_catch = function(binned_results_dframe_joined,player_position_data){
           axis.ticks = element_blank())+
     xlab("")+
     ylab("")+
-    facet_wrap(~(round(launch_angle*0.1,0)*10),ncol = 2)+
+    facet_wrap(~(paste("LA = ",round(launch_angle*0.1,0)*10,"°",sep="")),ncol = 2)+
     annotate("segment",x=0,y=0,xend=-200,yend=200,color="black",size=1)+
     annotate("segment",x=0,y=0,xend=200,yend=200,color="black",size=1)+
     annotate("segment",x=0,y=0,xend=200,yend=200,color="black",size=1)+
@@ -1005,14 +1007,15 @@ plot_output_infield = function(infield_plays_in,infield_position_data_in){
     out_prob_sum = sum(success_field,na.rm=TRUE),
     field_depth = field_depth[success_field == max(success_field)],
     out_prob = 1- Reduce("*",fail_field),
-    infield_prob = 1 - Reduce("*",fail_reach_ball)
+    infield_prob = 1 - Reduce("*",fail_reach_ball),
+    .groups = "drop"
   ) %>% 
     mutate(out_prob = if_else(out_prob>=1,1,out_prob))
   
   
   infield_plays_summary %>% filter(hit_distance>=0) %>% ggplot(aes(x = hit_distance*sin(pull*pi/180),y = hit_distance*cos(pull*pi/180),color = out_prob,size=frac))+
     guides(size = "none")+
-    scale_color_viridis_c(lim=c(0,1),oob = scales::squish)+
+    scale_color_viridis_c(lim=c(0,1),oob = scales::squish,labels = scales::percent_format())+
     labs(color = "GroundOut%")+
     theme_minimal()+
     theme(panel.grid = element_blank(),
@@ -1036,6 +1039,3 @@ plot_output_infield = function(infield_plays_in,infield_position_data_in){
 }
 
 output_stats = function(){}
-
-
-

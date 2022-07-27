@@ -11,8 +11,10 @@
 # plots of the spray chart for GB and FB
 # relative fraction of outs by different fielders
 
+options(warn = -1)
 
 
+library(beepr)
 library(shiny)
 library(tidyverse)
 library(sigmoid)
@@ -36,7 +38,13 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      helpText("Test out a fielding alignment while varying batter tendencies and individual fielder ability")),
+      helpText(HTML("Test out a fielding alignment while varying batter tendencies and individual fielder ability")),
+      helpText(HTML("<br>Before using the app, check if it is busy using the button below")),
+      actionButton(inputId = "test_busy",label="Click to Test"),
+      uiOutput("test_busy_out"),
+      helpText("The button should display the current date and time, if it doesn't respond then the application is currently busy"),
+      helpText(HTML("<br>Please try a mirrored site if this application is busy:")),
+      helpText(HTML("<a href='https://pitching.shinyapps.io/ShiftTester_Mirror1/'>Mirror 1</a><br><a href='https://pitching.shinyapps.io/ShiftTester_Mirror2/'>Mirror 2</a>"))),
     
     
     mainPanel(fluidPage(
@@ -50,7 +58,7 @@ ui <- fluidPage(
       sliderInput("batter_gb","Average Batter Groundball Pull%", min = 0.4,max = 0.85,value = 0.7),
       sliderInput("batter_fb","Average Batter Flyball Pull%", min = 0.25,max = 0.8,value = 0.45),
       sliderInput("batter_speed","Batter Home-to-First Time (ms)",min = 3900,max = 5000,value = 4500),
-      selectInput("batter_names","Alternatively, update the sliders above with an existing MLB hitter",choices = unique(batter_name_data$name)),
+      selectInput("batter_names","Alternatively, update the sliders above with an existing MLB hitter",choices = append("",unique(batter_name_data$name))),
       actionButton("update_hitter","Update using MLB hitter values"),
       actionButton("go_batter","Create Spray Distribution Graphs"),
       h2("Exit Velocity"),
@@ -109,7 +117,7 @@ ui <- fluidPage(
       uiOutput("babip"),
       h2("Flyouts"),
       h4("Catch Probability By Launch Angle and Landing Point"),
-      plotOutput("catch_plot",height="1200px"),
+      plotOutput("catch_plot"),#,height="1200px"),
       uiOutput("catch_info"),
       h2("Groundouts"),
       h4("Groundout Probability by Ball Landing Position"),
@@ -127,7 +135,18 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
+  observeEvent(input$test_busy,{
+    output$test_busy_out = renderUI(HTML(paste(date(),
+                                               "<br>",
+                                               "Application is not busy",
+                                               sep="")))
+  })
+  
   observeEvent(input$update_hitter,{
+    if(input$batter_names==""){
+      return()
+    }
+    print(input$batter_names)
     hitter_spec = batter_name_data %>% filter(name==input$batter_names)
     
     updateSliderInput(session,"batter_ev","Average Batter Exit Velocity (mph)", min = 75,max = 95,value = hitter_spec$launch_speed_av)
@@ -390,6 +409,7 @@ server <- function(input, output, session) {
     batter_speed = input$batter_speed
     
     
+
     infield_ability = data.frame(
       player_position = c(3,4,5,6),
       range_factor = c(input$range_1b,input$range_2b,input$range_3b,input$range_ss), # extra ability of reaching a groundball
@@ -398,6 +418,8 @@ server <- function(input, output, session) {
     )
     
     
+    print(player_position_data)
+    print(infield_ability)
     
     
     output$fielder_input = renderPlot({
@@ -432,6 +454,11 @@ server <- function(input, output, session) {
                   "<h3>Flyout% = <b>",round(100*results_summary$`FO%`,0),"</b></h3><br><br>",
                   "<h3>Groundout% = <b>",round(100*results_summary$`GO%`,0),"</b></h3><br><br>"))
     })
+    
+    print(paste0("BABIP =",round(results_summary$BABIP,3)))
+    print(paste0("Flyout% =",round(100*results_summary$`FO%`,0)))
+    print(paste0("Groundout% =",round(100*results_summary$`GO%`,0)))
+    
     output$catch_info = renderUI({
       HTML(paste0("<h3>Flyout to 1B = <b>",round(filter(results_summary$catch_summary,player_position==3)$catch*100,0),"%</b></h3>","<br>",
                   "<h3>Flyout to 2B = <b>",round(filter(results_summary$catch_summary,player_position==4)$catch*100,0),"%</b></h3>","<br>",
@@ -507,6 +534,11 @@ server <- function(input, output, session) {
       transfer_time = c(input$transfer_1b,input$transfer_2b,input$transfer_3b,input$transfer_ss),
       throw_speed = c(input$arm_1b,input$arm_2b,input$arm_3b,input$arm_ss)
     )
+    
+    print("Fitting")
+    print(player_position_data)
+    print(infield_ability)
+    
     
     batter_spray_new = find_batter_spray(batter_spray,avg_speed = input$batter_ev,average_launch = input$batter_la,gb_pull = input$batter_gb,fb_pull = input$batter_fb,handedness = input$batter_hand,tabulated_spray = spray_chart_tabulate)
     #batter_spray_new %>% group_by(gb = as.numeric(launch_angle<=10)) %>% summarise(pull = sum(frac[pull<=0])) %>% mutate(new_frac = pull / sum(pull)) %>% print()
@@ -616,7 +648,12 @@ server <- function(input, output, session) {
       fig
     })
     
+    print(paste0("BABIP =",round(results_summary$BABIP,3)))
+    print(paste0("Flyout% =",round(100*results_summary$`FO%`,0)))
+    print(paste0("Groundout% =",round(100*results_summary$`GO%`,0)))
+    
     shinybusy::remove_modal_spinner()
+    beepr::beep(sound="coin")
     
     
     
