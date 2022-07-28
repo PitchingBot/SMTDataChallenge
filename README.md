@@ -10,5 +10,7 @@ Source code for the shiny application is located in the "Shift_Tester_App" folde
 You can find the application hosted online at the following URLs:
 
 https://pitching.shinyapps.io/ShiftTester/
+
 https://pitching.shinyapps.io/ShiftTester_Mirror1/
+
 https://pitching.shinyapps.io/ShiftTester_Mirror2/
